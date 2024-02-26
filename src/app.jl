@@ -1,9 +1,12 @@
 using Oxygen
 using HTTP
+import TOML
 
 include("controller/Controller.jl")
-include("service/Service.jl")
+include("utils/Constants.jl")
 
+
+config = TOML.parsefile(SERVER_CONFIG_PATH)
 
 # start the web server
-serve(port=8000)
+serve(host=config[SERVER][HOST], port=config[SERVER][PORT])  
