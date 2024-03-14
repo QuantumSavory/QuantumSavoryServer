@@ -1,9 +1,20 @@
+name = "QuantumSavoryServer"
+uuid = "0e199bf1-fd18-406e-81a3-ecc6293f054a"
+authors = ["Krishna Praneet Gudipaty"]
+version = "0.1.0"
+
 [deps]
+Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
 Distributed = "8ba89e20-285c-5b6f-9357-94700520ee1b"
 GLMakie = "e9467ef8-e4e7-5192-8a1a-b1aee30e663a"
 HTTP = "cd3eb016-35fb-5094-929b-558a96fad6f3"
 JSON3 = "0f8b85d8-7281-11e9-16c2-39a750bddbf1"
 Oxygen = "df9a0d86-3283-4920-82dc-4555fc0d1d8b"
 QuantumSavory = "2de2e421-972c-4cb5-a0c3-999c85908079"
+QuantumSymbolics = "efa7fd63-0460-4890-beb7-be1bbdfbaeae"
 StructTypes = "856f2bd8-1eba-4b0a-8007-ebc267875bd4"
+SwaggerMarkdown = "1b6eb727-ad4b-44eb-9669-b9596a6e760f"
 TOML = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+UUIDs = "cf7118a7-6976-5b1a-9a39-7adc72f591a4"
+YAML = "ddb6d928-2868-570f-bddf-ab3f9cf99eb6"

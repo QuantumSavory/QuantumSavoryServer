@@ -1,0 +1,34 @@
+components:
+  schemas:
+    RegisterRequest:
+      properties:
+        reg_idx:
+          type: integer
+        slot_idx:
+          type: integer
+        tag: 
+          type: array
+          items: integer
+        operation:
+          type: string
+        state:
+          type: string  
+    
+      required:  
+        - reg_idx
+        - slot_idx
+    Response:
+      properties:
+        status:
+          type: string
+          enum: ['success', 'error']
+          example: success 
+        data:
+          type: string
+          example: '2024-03-08T00:14:01.839'
+        message: 
+          type: string
+          example: ""
+        code:
+          type: integer
+          example: 200

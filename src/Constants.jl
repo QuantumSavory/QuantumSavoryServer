@@ -1,4 +1,4 @@
-const SERVER_CONFIG_PATH = "Config.toml"
+const SERVER_CONFIG_PATH = joinpath(@__DIR__, "../Config.toml")
 
 const SERVER = "server"
 const PORT = "port"
