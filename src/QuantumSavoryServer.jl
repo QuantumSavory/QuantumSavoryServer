@@ -3,8 +3,6 @@ using HTTP
 using TOML: parsefile
 using YAML: load_file
 
-
-
 include("Constants.jl")
 include("URL.jl")
 include("Model.jl")
@@ -23,10 +21,10 @@ mergeschema(swagger_document)
 # server config
 config = parsefile(SERVER_CONFIG_PATH)
 
+# Define the network
 reg_net = RegisterNet([Register(3), Register(4), Register(3)])
 
-function runserver()
-  serve(host=config[SERVER][HOST], port=config[SERVER][PORT])  
-end
-# start the web server
+# Starting point for the Quantum Savory Server
+serve(host=config[SERVER][HOST], port=config[SERVER][PORT])  
+
 

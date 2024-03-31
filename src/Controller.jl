@@ -8,72 +8,115 @@ using QuantumSavory
 using Dates
 using SwaggerMarkdown
 
+statemap = Dict("X1" => X1, "X2" => X2, "Y1" => Y1, "Y2" => Y2, "Z1" => Z1, "Z2" => Z2)              
+operatormap = Dict("X" => X, "Y" => Y, "Z" => Z, "σ₋" => Pm, "σ₊" => Pp, "Pm" => Pm, "Pp" => Pp, "H" => H, "CNOT" => CNOT, "CPHASE" => CPHASE)              
+
 @swagger """
-$CREATE_TAG_URL:
+"/register/{reg}/tag":
   post:
     summary: Create tags for registers
-    description: Creates tags for the registers that will be available while querying
+    description: Creates tags for the register `reg` that will be available while querying
+    parameters:
+        - in: path
+          name: reg
+          schema:
+            type: integer
+          required: true
+          description: Register for the tagging operation
+          example: 1
+
     responses:
-      '200':
-        description: OK
+      '201':
+        description: Created the tags
 """
-@post CREATE_TAG_URL function(req::HTTP.Request)
+@post "/register/{reg}/tag" function(req::HTTP.Request, reg::Int)
   @info "Received request to add register tag"
-  local tag_req
-  try
-    tag_req = json(req, TagRequest)
-  catch error
-    return HTTP.Response(400, "Could not deserialize request due to : $(string(error))")
+  params = queryparams(req)
+  slots = [parse(Int, s) for s in split(params["slots"], ",")]
+  regrefs = [reg_net[reg, s] for s in slots]
+  tagitems = split(params["tag"], ",")
+  
+  tag = []
+  push!(tag, Symbol(tagitems[1])) 
+  for item in tagitems[2:end]
+    push!(tag, parse(Int, item))
   end
-    response = create_tag!(tag_req)
-  return response
+
+  for regref in regrefs
+    tag!(regref, tag...)
+  end
+  
+  return HTTP.Response(201)
 end
 
 @swagger """
-$INITIALIZE_REGISTER_URL:
+"/register/{reg}/initialize":
   post:
     summary: Initialize the register slots
     description: Initialize the registers with a state
+    parameters:
+        - in: path
+          name: reg
+          schema:
+            type: integer
+          required: true
+          description: Register for the initialize operation
+          example: 1
+
     responses:
-      '200':
-        description: OK
+      '201':
+        description: Initialized the slots
 """
-@post INITIALIZE_REGISTER_URL function (req::HTTP.Request)
+@post "/register/{reg}/initialize" function (req::HTTP.Request, reg::Int)  
   @info "Received request to initialize register"
-  local initialize_req
-  try
-    initialize_req = json(req, InitializeRequest)
-  catch error
-    return HTTP.Response(400, "Could not deserialize request due to : $(string(error))")
+  params = queryparams(req)
+  slots = [parse(Int, s) for s in split(params["slots"], ",")]
+  regrefs = [reg_net[reg, s] for s in slots]
+  
+  if haskey(params, "state")
+    state = statemap[params["state"]]
+    for regref in regrefs 
+      initialize!(regref, state)
+    end
+  else
+    for regref in regrefs 
+      initialize!(regref)
+    end
   end
-  response::Response = initialize_register!(initialize_req)
-  return response
+
+  return HTTP.Response(201)
 end
 
 @swagger """
-$APPLY_OPERATION_URL:
+"/register/{reg}/apply":
   post:
     summary: Apply an operation
     description: Applies the operator on registers
-          
+    parameters:
+        - in: path
+          name: reg
+          schema:
+            type: integer
+          required: true
+          description: Register for the apply operation
+          example: 1
+
     responses:
-      '200':
-        description: OK
+      '201':
+        description: Applied the operator
 """
-@post APPLY_OPERATION_URL function (req::HTTP.Request)
+@post "/register/{reg}/apply" function (req::HTTP.Request, reg::Int)
   @info "Received request to apply operation"
-  local apply_req
-  try
-    apply_req = json(req, ApplyRequest)
-  catch error
-    return HTTP.Response(400, "Could not deserialize request due to : $(string(error))")
-  end
-  response::Response = apply_operation!(apply_req)
-  return response
+  params = queryparams(req)
+  slots = [parse(Int, s) for s in split(params["slots"], ",")]
+  regrefs = [reg_net[reg, s] for s in slots]
+  operator = operatormap[params["operator"]]
+  apply!(regrefs, operator)  
+  return HTTP.Response(201)
 end
 
 @swagger """
-$GET_TIME_URL:
+"/time":
   get:
     summary: Returns the current system time
     description: Returns current system time in ISO 8601 format
@@ -82,7 +125,7 @@ $GET_TIME_URL:
       '200':
         description: Successfully returned the system time
 """
-@get GET_TIME_URL function (req::HTTP.Request)
+@get "/time" function (req::HTTP.Request)
   @info "Received request to get time"
   response::Response{DateTime} = get_current_time()
   return response
