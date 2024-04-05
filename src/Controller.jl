@@ -50,6 +50,44 @@ operatormap = Dict("X" => X, "Y" => Y, "Z" => Z, "σ₋" => Pm, "σ₊" => Pp, "
 end
 
 @swagger """
+"/register/{reg}/untag":
+  post:
+    summary: Remove tags from register slots
+    description: Finds and removes tags (untag) for the register `reg` 
+    parameters:
+        - in: path
+          name: reg
+          schema:
+            type: integer
+          required: true
+          description: Register for the untagging operation
+          example: 1
+
+    responses:
+      '201':
+        description: Untagged the register slots
+"""
+@post "/register/{reg}/untag" function(req::HTTP.Request, reg::Int)
+  @info "Received request to untag a register"
+  params = queryparams(req)
+  slots = [parse(Int, s) for s in split(params["slots"], ",")]
+  regrefs = [reg_net[reg, s] for s in slots]
+  tagitems = split(params["tag"], ",")
+  
+  tag = []
+  push!(tag, Symbol(tagitems[1])) 
+  for item in tagitems[2:end]
+    push!(tag, parse(Int, item))
+  end
+  
+  for regref in regrefs
+    untag!(regref, Tag(tag...))
+  end
+  
+  return HTTP.Response(201)
+end
+
+@swagger """
 "/register/{reg}/initialize":
   post:
     summary: Initialize the register slots
@@ -129,4 +167,158 @@ end
   @info "Received request to get time"
   response::Response{DateTime} = get_current_time()
   return response
+end
+
+@swagger """
+"/register/{reg}/traceout":
+  post:
+    summary: Delete the register slots state
+    description: Delete the given slots of the given register
+    parameters:
+        - in: path
+          name: reg
+          schema:
+            type: integer
+          required: true
+          description: Register for the traceout operation
+          example: 1
+
+    responses:
+      '201':
+        description: Successfully deleted the register slots
+"""
+@post "/register/{reg}/traceout" function (req::HTTP.Request, reg::Int)  
+  @info "Received request to initialize register"
+  params = queryparams(req)
+  slots = [parse(Int, s) for s in split(params["slots"], ",")]
+  regrefs = [reg_net[reg, s] for s in slots]
+  traceout!(regrefs...)
+  return HTTP.Response(201)
+end
+
+@swagger """
+"/register/{reg}/project-traceout":
+  post:
+    summary: Projective traceout on the register slots
+    description: Does a projective traceout on the register slots to the given basis
+    parameters:
+        - in: path
+          name: reg
+          schema:
+            type: integer
+          required: true
+          description: Register for the project-traceout operation
+          example: 1
+
+    responses:
+      '201':
+        description: Projective traceout the register slots
+"""
+@post "/register/{reg}/project-traceout" function(req::HTTP.Request, reg::Int)
+  @info "Received request to project-traceout register"
+  params = queryparams(req)
+  slots = [parse(Int, s) for s in split(params["slots"], ",")]
+  regrefs = [reg_net[reg, s] for s in slots]
+  basis = [statemap[s] for s in split(params["basis"], ",")]
+  
+  for regref in regrefs
+    project_traceout!(regref, basis)
+  end
+  
+  return HTTP.Response(201)
+end
+
+
+@swagger """
+"/register/{reg}/queryall":
+  get:
+    summary: Query the register to find all slots with the tags
+    description: Finds all the slots in the given register `reg` with the given tags
+    parameters:
+        - in: path
+          name: reg
+          schema:
+            type: integer
+          required: true
+          description: Register for the queryall operation
+          example: 1
+
+    responses:
+      '200':
+        description: Returns all slots with the given tag
+"""
+@get "/register/{reg}/queryall" function(req::HTTP.Request, reg::Int)
+  @info "Received request to queryall register"
+  params = queryparams(req)
+  tagitems = split(params["tag"], ",")
+
+  idx = 1
+  query_items = []
+  for tag in tagitems
+    if idx == 1
+      push!(query_items, Symbol(tag))
+    else
+      if tag == "?" || tag == "W"
+        push!(query_items, ❓)
+      elseif tag[1] == '<'
+        push!(query_items, <(parse(Int, tag[2:end])))
+      elseif tag[1] == '>'
+        push!(query_items, >(parse(Int, tag[2:end])))
+      else
+        push!(query_items, parse(Int, tag))
+      end
+    end
+    idx += 1
+  end
+  
+  result = queryall(reg_net[reg], query_items...)
+  slots = [res.slot.idx for res in result]
+  return HTTP.Response(200, ["Content-Type" => "application/json"], body=JSON3.write(Dict("slots" => slots)))
+end
+
+@swagger """
+"/register/{reg}/query":
+  get:
+    summary: Query the register to find the first slot with the tags
+    description: Finds the first slot in the given register `reg` with the given tags
+    parameters:
+        - in: path
+          name: reg
+          schema:
+            type: integer
+          required: true
+          description: Register for the queryall operation
+          example: 1
+
+    responses:
+      '200':
+        description: Returns the first slots with the given tag
+"""
+@get "/register/{reg}/query" function(req::HTTP.Request, reg::Int)
+  @info "Received request to query register"
+  params = queryparams(req)
+  tagitems = split(params["tag"], ",")
+
+  idx = 1
+  query_items = []
+  for tag in tagitems
+    if idx == 1
+      push!(query_items, Symbol(tag))
+    else
+      if tag == "?" || tag == "W" 
+        push!(query_items, ❓)
+      elseif tag[1] == '<'
+        push!(query_items, <(parse(Int, tag[2:end])))
+      elseif tag[1] == '>'
+        push!(query_items, >(parse(Int, tag[2:end])))
+      else
+        push!(query_items, parse(Int, tag))
+      end
+    end
+    idx += 1
+  end
+  
+  result = query(reg_net[reg], query_items...)
+  response = isnothing(result) ? nothing : result.slot.idx
+  return HTTP.Response(200, ["Content-Type" => "application/json"], body=JSON3.write(Dict("slot" => response)))
 end
