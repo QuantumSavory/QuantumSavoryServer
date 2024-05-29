@@ -1,4 +1,5 @@
 using Oxygen
+using Oxygen: html
 using HTTP
 using Distributed
 using UUIDs
@@ -46,6 +47,7 @@ operatormap = Dict("X" => X, "Y" => Y, "Z" => Z, "σ₋" => Pm, "σ₊" => Pp, "
     tag!(regref, tag...)
   end
   
+  notify(obs)
   return HTTP.Response(201)
 end
 
@@ -84,6 +86,7 @@ end
     untag!(regref, Tag(tag...))
   end
   
+  notify(obs)
   return HTTP.Response(201)
 end
 
@@ -122,6 +125,7 @@ end
     end
   end
 
+  notify(obs)
   return HTTP.Response(201)
 end
 
@@ -150,6 +154,7 @@ end
   regrefs = [reg_net[reg, s] for s in slots]
   operator = operatormap[params["operator"]]
   apply!(regrefs, operator)  
+  notify(obs)
   return HTTP.Response(201)
 end
 
@@ -193,6 +198,7 @@ end
   slots = [parse(Int, s) for s in split(params["slots"], ",")]
   regrefs = [reg_net[reg, s] for s in slots]
   traceout!(regrefs...)
+  notify(obs)
   return HTTP.Response(201)
 end
 
@@ -224,7 +230,7 @@ end
   for regref in regrefs
     project_traceout!(regref, basis)
   end
-  
+  notify(obs)
   return HTTP.Response(201)
 end
 
@@ -404,4 +410,19 @@ end
   run(get_time_tracker(reg_net))
   result = query(mb, query_items...)
   return HTTP.Response(200, body=JSON3.write(result))
+end
+
+@swagger """
+"/plot":
+  get:
+    summary: Plot a view of the register network
+    description: Plots the register network and returns html for it
+
+    responses:
+      '200':
+        description: Successfully received the plot
+"""
+@get "/plot" function (req::HTTP.Request)  
+  @info "Received request to plot the register network"
+  return html(f)
 end
