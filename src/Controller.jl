@@ -322,3 +322,86 @@ end
   response = isnothing(result) ? nothing : result.slot.idx
   return HTTP.Response(200, ["Content-Type" => "application/json"], body=JSON3.write(Dict("slot" => response)))
 end
+
+@swagger """
+"/register/{reg}/channel":
+  post:
+    summary: Send a classical message from register `reg`
+    description: Sends a classical message from register `reg`
+    parameters:
+        - in: path
+          name: reg
+          schema:
+            type: integer
+          required: true
+          description: Source Register for the classical message
+          example: 1
+
+    responses:
+      '201':
+        description: Successfully send the message
+"""
+@post "/register/{reg}/channel" function (req::HTTP.Request, reg::Int)  
+  @info "Received request to send a classical message from register"
+  params = queryparams(req)
+  # slots = [parse(Int, s) for s in split(params["slots"], ",")]
+  # regrefs = [reg_net[reg, s] for s in slots]
+  dest = parse(Int64, params["dest"])
+  tagitems = split(params["tag"], ",")
+  tag = []
+  push!(tag, Symbol(tagitems[1])) 
+  for item in tagitems[2:end]
+    push!(tag, parse(Int, item))
+  end
+
+  put!(channel(reg_net, reg=>dest), Tag(tag...))
+  return HTTP.Response(201)
+end
+
+@swagger """
+"/register/{reg}/channel":
+  get:
+    summary: Retrieve a classical message from destination register `reg`
+    description: Retrieves the classical message from register `reg` by using query on the assosiated message buffer
+    parameters:
+        - in: path
+          name: reg
+          schema:
+            type: integer
+          required: true
+          description: Destination register for the classical message
+          example: 1
+
+    responses:
+      '201':
+        description: Successfully send the message
+"""
+@get "/register/{reg}/channel" function (req::HTTP.Request, reg::Int)  
+  @info "Received request to retrieve a classical message from register"
+  params = queryparams(req)
+  tagitems = split(params["tag"], ",")
+  
+  idx = 1
+  query_items = []
+  for tag in tagitems
+    if idx == 1
+      push!(query_items, Symbol(tag))
+    else
+      if tag == "?" || tag == "W" 
+        push!(query_items, ❓)
+      elseif tag[1] == '<'
+        push!(query_items, <(parse(Int, tag[2:end])))
+      elseif tag[1] == '>'
+        push!(query_items, >(parse(Int, tag[2:end])))
+      else
+        push!(query_items, parse(Int, tag))
+      end
+    end
+    idx += 1
+  end
+
+  mb = messagebuffer(reg_net, reg)
+  run(get_time_tracker(reg_net))
+  result = query(mb, query_items...)
+  return HTTP.Response(200, body=JSON3.write(result))
+end
