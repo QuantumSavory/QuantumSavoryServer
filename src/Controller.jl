@@ -165,8 +165,8 @@ end
 """
 @get "/time" function (req::HTTP.Request)
   @info "Received request to get time"
-  response::Response{DateTime} = get_current_time()
-  return response
+  current_time = now()
+  return current_time
 end
 
 @swagger """
